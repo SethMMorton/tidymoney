@@ -1014,6 +1014,7 @@ dependencies = [
  "csv",
  "expanduser",
  "indoc",
+ "regex",
  "rstest",
  "rust_decimal",
  "rust_decimal_macros",

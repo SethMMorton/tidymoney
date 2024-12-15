@@ -1,25 +1,66 @@
+mod eqregex;
 mod file_io;
 mod rules;
 mod timestamps;
 
+use std::collections::HashMap;
+
+use anyhow::{anyhow, Result};
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-use timestamps::serialize_date;
+use timestamps::{serialize_date, DATE_FORMAT};
 
 /// Container for bank data to be serialized into the normalized CSV.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
-struct NormalizedBankData<'a> {
+pub struct NormalizedBankData {
     #[serde(serialize_with = "serialize_date")]
-    date: &'a NaiveDate,
-    payee: &'a str,
-    category: &'a str,
-    memo: Option<&'a str>,
-    amount: &'a Decimal,
+    pub date: NaiveDate,
+    pub payee: String,
+    pub category: Option<String>,
+    pub memo: Option<String>,
+    pub amount: Decimal,
     #[serde(rename = "Check#")]
-    check: Option<u32>,
+    pub check: Option<u32>,
+    #[serde(skip_serializing)]
+    pub orig_payee: String,
+}
+
+impl NormalizedBankData {
+    fn new(mapping: HashMap<String, String>) -> Result<Self> {
+        let date = mapping
+            .get("Date")
+            .and_then(|x| NaiveDate::parse_from_str(x, DATE_FORMAT).ok())
+            .ok_or(anyhow!(
+                "Either a Date column is missing, or the value cannot be read as a date."
+            ))?;
+        let payee = mapping
+            .get("Payee")
+            .ok_or(anyhow!("A Payee column is missing."))?
+            .to_owned();
+        let category = mapping.get("Category").and_then(|x| Some(x.to_owned()));
+        let memo = mapping.get("Memo").and_then(|x| Some(x.to_owned()));
+        let amount = mapping
+            .get("Amount")
+            .and_then(|x| Decimal::from_str_exact(x).ok())
+            .ok_or(anyhow!(
+                "Either an Amount column is missing, or the value cannot be read as a decimal."
+            ))?;
+        let check = mapping.get("Check#").and_then(|x| x.parse().ok());
+        let orig_payee = payee.to_owned();
+
+        return Ok(NormalizedBankData {
+            date,
+            payee,
+            category,
+            memo,
+            amount,
+            check,
+            orig_payee,
+        });
+    }
 }
 
 /// Convert a dollar amount in string form into a Decimal object.
@@ -46,8 +87,6 @@ mod test {
     use rstest::rstest;
     use rust_decimal_macros::dec;
 
-    use crate::timestamps::DATE_FORMAT;
-
     #[rstest]
     #[case("4.56", false, dec!(4.56))]
     #[case("-4.56", false, dec!(-4.56))]
@@ -71,21 +110,23 @@ mod test {
 
         // Write two entries to the writer.
         wtr.serialize(NormalizedBankData {
-            date: &NaiveDate::parse_from_str("2024-01-01", DATE_FORMAT).unwrap(),
-            payee: "MOD",
-            category: "Dining",
+            date: NaiveDate::parse_from_str("2024-01-01", DATE_FORMAT).unwrap(),
+            payee: "MOD".to_string(),
+            category: Some("Dining".to_string()),
             memo: None,
-            amount: &dec!(-15.32),
+            amount: dec!(-15.32),
             check: None,
+            orig_payee: "MOD PIZZA".to_string(),
         })
         .unwrap();
         wtr.serialize(NormalizedBankData {
-            date: &NaiveDate::parse_from_str("2024-02-01", DATE_FORMAT).unwrap(),
-            payee: "ACE",
-            category: "Home:Maintenance",
-            memo: Some("Nails"),
-            amount: &dec!(-6.02),
+            date: NaiveDate::parse_from_str("2024-02-01", DATE_FORMAT).unwrap(),
+            payee: "ACE".to_string(),
+            category: Some("Home:Maintenance".to_string()),
+            memo: Some("Nails".to_string()),
+            amount: dec!(-6.02),
             check: Some(123),
+            orig_payee: "ACE HARDWARE CO".to_string(),
         })
         .unwrap();
         wtr.flush().unwrap();

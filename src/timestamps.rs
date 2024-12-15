@@ -72,7 +72,7 @@ impl TimestampKeeper {
     pub fn update_date(&mut self, account: &str, date: &NaiveDate) {
         let this_date = self
             .dates
-            .entry(account.to_string())
+            .entry(account.to_owned())
             .or_insert(TimestampKeeper::early());
         if date > this_date {
             self.dates.insert(account.to_string(), *date);
