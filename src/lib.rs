@@ -1,4 +1,3 @@
-mod eqregex;
 mod file_io;
 mod rules;
 mod timestamps;
@@ -10,7 +9,8 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-use timestamps::{serialize_date, DATE_FORMAT};
+pub use crate::rules::RuleFileData;
+use crate::timestamps::{serialize_date, DATE_FORMAT};
 
 /// Container for bank data to be serialized into the normalized CSV.
 #[derive(Debug, Serialize)]
@@ -78,6 +78,14 @@ pub fn interpret_dollar_amount(amount: &str, negate: bool) -> Decimal {
     } else {
         amt
     }
+}
+
+/// Test helper function for converting vectors to hashmaps.
+#[cfg(test)]
+pub fn as_hashmap(data: Vec<(&str, &str)>) -> HashMap<String, String> {
+    data.into_iter()
+        .map(|(x, y)| (x.to_owned(), y.to_owned()))
+        .collect()
 }
 
 #[cfg(test)]
