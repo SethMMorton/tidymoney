@@ -78,10 +78,14 @@ impl CategoryAndMemoRules {
 
     /// Determine if the given transaction matches this set of rules.
     pub fn transaction_matches(&self, transaction: &NormalizedBankData) -> bool {
-        if self.payee.as_ref().is_some_and(|p| *p == transaction.payee) {
+        // If a payee is provided and it does not match then
+        // this transaction does not match.
+        if self.payee.as_ref().is_some_and(|p| *p != transaction.payee) {
             return false;
         }
 
+        // If an original payee pattern is provided and it does not match then
+        // this transaction does not match.
         if self
             .orig_payee
             .as_ref()
@@ -90,24 +94,35 @@ impl CategoryAndMemoRules {
             return false;
         }
 
+        // If a category pattern is provided and it does not match then
+        // this transaction does not match. If no transaction category is provided
+        // by default it cannot match.
+        let cat = transaction.category.as_ref();
         if self
             .category
             .as_ref()
-            .is_some_and(|cc| transaction.category.as_ref().is_some_and(|tc| *tc == *cc))
+            .is_some_and(|cc| cat.is_none() || cat.is_some_and(|tc| *tc != *cc))
         {
             return false;
         }
 
-        // TODO: Add IncomeOk
-
-        let min_amt = self.min_amount.unwrap_or(Decimal::MIN);
-        let max_amt = self.min_amount.unwrap_or(Decimal::MAX);
-        if !(transaction.amount >= min_amt && transaction.amount <= max_amt) {
+        // If income is not OK but this is income then this transaction does not match.
+        if !self.income_ok && transaction.amount > Decimal::ZERO {
             return false;
         }
 
-        // If the amount is not equal to the target it cannot be a match.
-        if self.amount.is_some_and(|x| x != transaction.amount) {
+        // If a min or max transaction value is provided and is not in the range then
+        // this transaction does not match. Express in absolute value for user ease.
+        let min_amt = self.min_amount.unwrap_or(Decimal::ZERO).abs();
+        let max_amt = self.max_amount.unwrap_or(Decimal::MAX).abs();
+        let amt = transaction.amount.abs();
+        if !(amt >= min_amt && amt <= max_amt) {
+            return false;
+        }
+
+        // If the amount is not equal to the target the transcaction does not match.
+        // Express in absolute value for user ease.
+        if self.amount.is_some_and(|x| x.abs() != amt) {
             return false;
         }
 
@@ -171,6 +186,7 @@ mod test {
     use super::*;
 
     use pretty_assertions::assert_eq;
+    use rstest::rstest;
 
     use crate::as_hashmap;
 
@@ -201,5 +217,81 @@ mod test {
             obj.validate("memo", "Sandwich").err().unwrap().to_string(),
             "The memo \"Sandwich\" must implement a rule."
         );
+    }
+
+    #[rstest]
+    #[case(
+        vec![("payee", "ACE")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("payee", "Target")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("orig_payee", "^ACE")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("orig_payee", "^TARGET")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("category", "Hardware")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("category", "Hardware")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43"), ("Category", "Hardware")],
+        true,
+    )]
+    #[case(
+        vec![("category", "Hardware")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43"), ("Category", "Garden")],
+        false,
+    )]
+    #[case(
+        vec![("min_amount", "10.00"), ("max_amount", "20.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_amount", "10.00"), ("max_amount", "15.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("income_ok", "true")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "15.43")],
+        true,
+    )]
+    #[case(
+        vec![],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "15.43")],
+        false,
+    )]
+    #[case(
+        vec![("amount", "15.43")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("amount", "15.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    fn test_transaction_matches(
+        #[case] given: Vec<(&str, &str)>,
+        #[case] txn_data: Vec<(&str, &str)>,
+        #[case] expected: bool,
+    ) {
+        let transaction = NormalizedBankData::new(as_hashmap(txn_data));
+        let result = CategoryAndMemoRules::new(as_hashmap(given)).transaction_matches(&transaction);
+        assert_eq!(result, expected);
     }
 }

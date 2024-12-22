@@ -29,29 +29,23 @@ pub struct NormalizedBankData {
 }
 
 impl NormalizedBankData {
-    fn new(mapping: HashMap<String, String>) -> Result<Self> {
+    #[cfg(test)]
+    fn new(mapping: HashMap<String, String>) -> Self {
         let date = mapping
             .get("Date")
             .and_then(|x| NaiveDate::parse_from_str(x, DATE_FORMAT).ok())
-            .ok_or(anyhow!(
-                "Either a Date column is missing, or the value cannot be read as a date."
-            ))?;
-        let payee = mapping
-            .get("Payee")
-            .ok_or(anyhow!("A Payee column is missing."))?
-            .to_owned();
+            .unwrap();
+        let payee = mapping.get("Payee").unwrap().to_owned();
         let category = mapping.get("Category").and_then(|x| Some(x.to_owned()));
         let memo = mapping.get("Memo").and_then(|x| Some(x.to_owned()));
         let amount = mapping
             .get("Amount")
             .and_then(|x| Decimal::from_str_exact(x).ok())
-            .ok_or(anyhow!(
-                "Either an Amount column is missing, or the value cannot be read as a decimal."
-            ))?;
+            .unwrap();
         let check = mapping.get("Check#").and_then(|x| x.parse().ok());
         let orig_payee = payee.to_owned();
 
-        return Ok(NormalizedBankData {
+        return NormalizedBankData {
             date,
             payee,
             category,
@@ -59,7 +53,7 @@ impl NormalizedBankData {
             amount,
             check,
             orig_payee,
-        });
+        };
     }
 }
 
