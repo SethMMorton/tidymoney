@@ -53,14 +53,15 @@ impl PayeeRules {
     /// Determine if the given transaction matches this set of rules.
     pub fn transaction_matches(&self, transaction: &NormalizedBankData) -> bool {
         // If the amount does not fall in the value ranges it cannot be a match.
-        let min_amt = self.min_amount.unwrap_or(Decimal::MIN);
-        let max_amt = self.min_amount.unwrap_or(Decimal::MAX);
-        if !(transaction.amount >= min_amt && transaction.amount <= max_amt) {
+        let min_amt = self.min_amount.unwrap_or(Decimal::ZERO).abs();
+        let max_amt = self.max_amount.unwrap_or(Decimal::MAX).abs();
+        let amt = transaction.amount.abs();
+        if !(amt >= min_amt && amt <= max_amt) {
             return false;
         }
 
         // If the amount is not equal to the target it cannot be a match.
-        if self.amount.is_some_and(|x| x != transaction.amount) {
+        if self.amount.is_some_and(|x| x.abs() != amt) {
             return false;
         }
 
@@ -172,4 +173,55 @@ where
             Wrapper::ScalarForm(scalar) => (k, vec![scalar]),
         })
         .collect())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use pretty_assertions::assert_eq;
+    use rstest::rstest;
+
+    use crate::as_hashmap;
+
+    #[rstest]
+    #[case(
+        vec![("pattern", "ACE")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("pattern", "Target")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("pattern", "ACE"), ("min_amount", "10.00"), ("max_amount", "20.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("pattern", "ACE"), ("min_amount", "10.00"), ("max_amount", "15.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("pattern", "ACE"), ("amount", "15.43")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("pattern", "ACE"), ("amount", "15.00")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    fn test_transaction_matches(
+        #[case] given: Vec<(&str, &str)>,
+        #[case] txn_data: Vec<(&str, &str)>,
+        #[case] expected: bool,
+    ) {
+        let transaction = NormalizedBankData::new(as_hashmap(txn_data));
+        let result = PayeeRules::new(as_hashmap(given)).transaction_matches(&transaction);
+        assert_eq!(result, expected);
+    }
 }

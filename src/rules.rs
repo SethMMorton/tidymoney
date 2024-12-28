@@ -159,11 +159,8 @@ mod test {
 
     use indoc::indoc;
     use pretty_assertions::assert_eq;
-    use regex::Regex;
-    use rust_decimal_macros::dec;
 
     use crate::as_hashmap;
-    use crate::rules::eqregex::EqRegex;
 
     fn aux_paths(temp: &tempdir::TempDir) -> (PathBuf, PathBuf) {
         // Create the auxillary paths and their locations.
