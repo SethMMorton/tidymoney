@@ -31,29 +31,44 @@ pub struct NormalizedBankData {
 impl NormalizedBankData {
     #[cfg(test)]
     fn new(mapping: HashMap<String, String>) -> Self {
-        let date = mapping
-            .get("Date")
-            .and_then(|x| NaiveDate::parse_from_str(x, DATE_FORMAT).ok())
-            .unwrap();
-        let payee = mapping.get("Payee").unwrap().to_owned();
-        let category = mapping.get("Category").and_then(|x| Some(x.to_owned()));
-        let memo = mapping.get("Memo").and_then(|x| Some(x.to_owned()));
-        let amount = mapping
-            .get("Amount")
-            .and_then(|x| Decimal::from_str_exact(x).ok())
-            .unwrap();
-        let check = mapping.get("Check#").and_then(|x| x.parse().ok());
-        let orig_payee = payee.to_owned();
+        Self::from_raw_data(mapping, false, DATE_FORMAT, "testing").unwrap()
+    }
 
-        return NormalizedBankData {
-            date,
-            payee,
-            category,
-            memo,
-            amount,
-            check,
-            orig_payee,
-        };
+    /// Instantiate this struct from raw data from file.
+    pub fn from_raw_data(
+        mapping: HashMap<String, String>,
+        negate: bool,
+        date_fmt: &str,
+        label: &str,
+    ) -> Result<Self> {
+        // Get required columns.
+        let payee_str = mapping
+            .get("Payee")
+            .ok_or_else(|| anyhow!(format!("The account '{label}' is missing the Payee column")))?;
+        let date_str = mapping
+            .get("Date")
+            .ok_or_else(|| anyhow!(format!("The account '{label}' is missing the Date column")))?;
+        let amount_str = mapping.get("Amount").ok_or_else(|| {
+            anyhow!(format!(
+                "The account '{label}' is missing the Amount column"
+            ))
+        })?;
+
+        // Calculate the values of all the fields and return.
+        return Ok(NormalizedBankData {
+            date: NaiveDate::parse_from_str(&date_str, date_fmt)?,
+            payee: payee_str.to_owned(),
+            category: mapping.get("Category").and_then(|x| Some(x.to_owned())),
+            memo: mapping.get("Memo").and_then(|x| Some(x.to_owned())),
+            amount: interpret_dollar_amount(&amount_str, negate),
+            check: mapping.get("Check#").and_then(|x| x.parse().ok()),
+            orig_payee: payee_str.to_owned(),
+        });
+    }
+
+    /// Determine if this transaction needs to be skipped.
+    pub fn skipme(&self, start_date: &NaiveDate, end_date: &NaiveDate) -> bool {
+        self.amount == Decimal::ZERO || self.date < *start_date || self.date > *end_date
     }
 }
 
@@ -61,7 +76,7 @@ impl NormalizedBankData {
 ///
 /// Some banks express this in negated values, and if that is the case
 /// the negate option can be used to re-interpret as positive.
-pub fn interpret_dollar_amount(amount: &str, negate: bool) -> Decimal {
+fn interpret_dollar_amount(amount: &str, negate: bool) -> Decimal {
     // Convert the given value to a decimal,
     // defaulting to zero if it cannot be converted.
     let amt = Decimal::from_str_exact(amount).unwrap_or_default();
@@ -111,33 +126,71 @@ mod test {
         let mut wtr = csv::Writer::from_writer(vec![]);
 
         // Write two entries to the writer.
-        wtr.serialize(NormalizedBankData {
-            date: NaiveDate::parse_from_str("2024-01-01", DATE_FORMAT).unwrap(),
-            payee: "MOD".to_string(),
-            category: Some("Dining".to_string()),
-            memo: None,
-            amount: dec!(-15.32),
-            check: None,
-            orig_payee: "MOD PIZZA".to_string(),
-        })
+        wtr.serialize(NormalizedBankData::new(as_hashmap(vec![
+            ("Date", "2024-01-01"),
+            ("Payee", "MOD"),
+            ("Category", "Dining"),
+            ("Amount", "-15.32"),
+            ("Check#", "one"),
+        ])))
         .unwrap();
-        wtr.serialize(NormalizedBankData {
-            date: NaiveDate::parse_from_str("2024-02-01", DATE_FORMAT).unwrap(),
-            payee: "ACE".to_string(),
-            category: Some("Home:Maintenance".to_string()),
-            memo: Some("Nails".to_string()),
-            amount: dec!(-6.02),
-            check: Some(123),
-            orig_payee: "ACE HARDWARE CO".to_string(),
-        })
+        wtr.serialize(NormalizedBankData::new(as_hashmap(vec![
+            ("Date", "2024-02-01"),
+            ("Payee", "ACE"),
+            ("Category", "Home:Maintenance"),
+            ("Memo", "Nails"),
+            ("Amount", "-6.02"),
+            ("Check#", "123"),
+            ("OrigPayee", "ACE HARDWARE CO"),
+        ])))
         .unwrap();
         wtr.flush().unwrap();
 
-        // Perform the test itself.
+        // Perfor the test itself.
         let expected = "Date,Payee,Category,Memo,Amount,Check#\n\
                               2024-01-01,MOD,Dining,,-15.32,\n\
                               2024-02-01,ACE,Home:Maintenance,Nails,-6.02,123\n";
         let result = String::from_utf8(wtr.into_inner().unwrap()).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(
+        vec![
+            ("Date", "2024-01-15"),
+            ("Payee", "MOD"),
+            ("Amount", "0.00"),
+        ],
+        true,
+    )]
+    #[case(
+        vec![
+            ("Date", "2023-12-31"),
+            ("Payee", "MOD"),
+            ("Amount", "-15.32"),
+        ],
+        true,
+    )]
+    #[case(
+        vec![
+            ("Date", "2024-02-02"),
+            ("Payee", "MOD"),
+            ("Amount", "-15.32"),
+        ],
+        true,
+    )]
+    #[case(
+        vec![
+            ("Date", "2024-01-01"),
+            ("Payee", "MOD"),
+            ("Amount", "-15.32"),
+        ],
+        false
+    )]
+    fn test_skipme(#[case] given: Vec<(&str, &str)>, #[case] expected: bool) {
+        let start_date = NaiveDate::parse_from_str("2024-01-01", &DATE_FORMAT).unwrap();
+        let end_date = NaiveDate::parse_from_str("2024-02-01", &DATE_FORMAT).unwrap();
+        let result = NormalizedBankData::new(as_hashmap(given)).skipme(&start_date, &end_date);
         assert_eq!(result, expected);
     }
 }
