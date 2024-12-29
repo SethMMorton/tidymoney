@@ -231,6 +231,7 @@ mod test {
         [[mappings.csv]]
         label = "pnc"
         identify = ["Date", "Reference Number", "Payee", "Address", "Amount"]
+        date_fmt = "%Y/%m/%d"
 
         [[mappings.csv]]
         label = "ally"
@@ -309,6 +310,7 @@ mod test {
                             .map(|x| x.to_string())
                             .collect(),
                         [].into(),
+                        Some("%Y/%m/%d".to_owned()),
                     ),
                     MappingRulesCsv::new(
                         "ally".to_string(),
@@ -320,6 +322,7 @@ mod test {
                             .iter()
                             .map(|(x, y)| (x.to_string(), y.to_string()))
                             .collect(),
+                        None,
                     ),
                 ],
             },
@@ -353,6 +356,7 @@ mod test {
                         .map(|x| x.to_string())
                         .collect(),
                     [].into(),
+                    None,
                 )],
             },
             paths: AuxillaryPaths::new(

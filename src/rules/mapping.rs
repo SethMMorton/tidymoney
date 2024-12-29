@@ -14,6 +14,14 @@ pub struct MappingRulesCsv {
     identify: Vec<String>,
     /// How to map the given column names to output column names.
     translate: Option<RemapValuesCsv>,
+    /// The format string for dates for this rule set.
+    #[serde(default = "default_fmt_string")]
+    date_fmt: String,
+}
+
+/// The default format string to use if not specified.
+fn default_fmt_string() -> String {
+    "%Y-%m-%d".to_owned()
 }
 
 impl MappingRulesCsv {
@@ -23,6 +31,7 @@ impl MappingRulesCsv {
         label: String,
         identify: Vec<String>,
         translate: HashMap<String, String>,
+        date_fmt: Option<String>,
     ) -> MappingRulesCsv {
         let payee = translate.get("payee");
         let date = translate.get("date");
@@ -41,6 +50,7 @@ impl MappingRulesCsv {
                 memo: memo.and_then(|x| Some(x.to_owned())),
                 check: check.and_then(|x| Some(x.to_owned())),
             }),
+            date_fmt: date_fmt.unwrap_or(default_fmt_string()),
         }
     }
 
@@ -210,7 +220,7 @@ mod test {
         identify: Vec<String>,
     ) {
         let label = "testing";
-        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(vec![]))
+        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(vec![]), None)
             .header_matches(&given.into_iter().map(|x| x.to_string()).collect());
         assert_eq!(result, expected);
     }
@@ -249,7 +259,7 @@ mod test {
         identify: Vec<String>,
     ) {
         let label = "testing";
-        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(given))
+        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(given), None)
             .validate()
             .is_ok();
         assert_eq!(result, expected);
@@ -300,7 +310,7 @@ mod test {
             ("Transaction Category", "Hardware"),
             ("Memo", "Things"),
         ];
-        let obj = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(translate));
+        let obj = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(translate), None);
         assert_eq!(obj.remap(as_hashmap(mapping)), as_hashmap(expected));
     }
 }
