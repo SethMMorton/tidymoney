@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
 /// Rules for how to identify CSV columns to accounts, and how
@@ -48,44 +49,59 @@ impl MappingRulesCsv {
         self.identify == *headers
     }
 
+    /// Ensure all mapping keys appear in the identify vector.
+    pub fn validate(&self) -> Result<()> {
+        if let Some(trans) = &self.translate {
+            let values = vec![
+                &trans.payee,
+                &trans.date,
+                &trans.amount,
+                &trans.category,
+                &trans.memo,
+                &trans.check,
+            ];
+            for value in values {
+                if let Some(val) = &value {
+                    if !self.identify.contains(val) {
+                        return Err(anyhow!(format!(
+                            "The account {} lists {} for translation {}",
+                            "but it is not listed in identify", &self.label, val,
+                        )));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Remap the columns in a mapping to what is desired on output.
-    pub fn remap(&self, mut mapping: HashMap<String, String>) {
+    pub fn remap(&self, mut mapping: HashMap<String, String>) -> HashMap<String, String> {
         // If this account does not define remappings we can just exist early.
         let Some(maps) = &self.translate else {
-            return;
+            return mapping;
         };
 
+        // Pair up each field with a key to which to map in the mapping.
+        let pairs = vec![
+            ("Payee", &maps.payee),
+            ("Date", &maps.date),
+            ("Amount", &maps.amount),
+            ("Category", &maps.category),
+            ("Memo", &maps.memo),
+            ("Check#", &maps.check),
+        ];
+
         // Remap each column name if the remapping is defined.
-        if let Some(k) = &maps.payee {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Payee".to_owned(), value);
+        for (key, value) in pairs {
+            if let Some(k) = value {
+                if let Some(val) = mapping.remove(k) {
+                    mapping.insert(key.to_owned(), val);
+                }
             }
         }
-        if let Some(k) = &maps.date {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Date".to_owned(), value);
-            }
-        }
-        if let Some(k) = &maps.amount {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Amount".to_owned(), value);
-            }
-        }
-        if let Some(k) = &maps.category {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Category".to_owned(), value);
-            }
-        }
-        if let Some(k) = &maps.memo {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Memo".to_owned(), value);
-            }
-        }
-        if let Some(k) = &maps.check {
-            if let Some(value) = mapping.remove(k) {
-                mapping.insert("Check#".to_owned(), value);
-            }
-        }
+
+        mapping
     }
 }
 
@@ -106,4 +122,185 @@ struct RemapValuesCsv {
     /// The Check# column.
     #[serde(rename = "Check#")]
     check: Option<String>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use pretty_assertions::assert_eq;
+    use rstest::{fixture, rstest};
+
+    use crate::as_hashmap;
+
+    #[fixture]
+    fn identify() -> Vec<String> {
+        vec![
+            "Transaction ID",
+            "Posting Date",
+            "Effective Date",
+            "Transaction Type",
+            "Amount",
+            "Check Number",
+            "Reference Number",
+            "Description",
+            "Transaction Category",
+            "Type",
+            "Balance",
+            "Memo",
+            "Extended Description",
+        ]
+        .into_iter()
+        .map(|x| x.to_string())
+        .collect()
+    }
+
+    #[rstest]
+    #[case(vec!["hello"], false)]
+    #[case(  // Missing transactions
+        vec![
+            "Transaction ID",
+            "Posting Date",
+            "Effective Date",
+            "Balance",
+            "Memo",
+            "Extended Description",
+        ],
+        false,
+    )]
+    #[case(  // Incorrect order
+        vec![
+            "Transaction ID",
+            "Posting Date",
+            "Effective Date",
+            "Transaction Type",
+            "Check Number",
+            "Amount",
+            "Reference Number",
+            "Description",
+            "Transaction Category",
+            "Type",
+            "Balance",
+            "Memo",
+            "Extended Description",
+        ],
+        false,
+    )]
+    #[case(
+        vec![
+            "Transaction ID",
+            "Posting Date",
+            "Effective Date",
+            "Transaction Type",
+            "Amount",
+            "Check Number",
+            "Reference Number",
+            "Description",
+            "Transaction Category",
+            "Type",
+            "Balance",
+            "Memo",
+            "Extended Description",
+        ],
+        true,
+    )]
+    fn test_header_matches(
+        #[case] given: Vec<&str>,
+        #[case] expected: bool,
+        identify: Vec<String>,
+    ) {
+        let label = "testing";
+        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(vec![]))
+            .header_matches(&given.into_iter().map(|x| x.to_string()).collect());
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(vec![], true)]
+    #[case(vec![("payee", "Vendor")], false)]
+    #[case(vec![("check", "Checking Number")], false)]
+    #[case(vec![("date", "Some Date")], false)]
+    #[case(vec![("amount", "Value")], false)]
+    #[case(vec![("memo", "Note")], false)]
+    #[case(vec![("category", "Column")], false)]
+    #[case(
+        vec![
+            ("date", "Posting Date"),
+            ("payee", "Description"),
+            ("category", "Transaction Category"),
+            ("check", "Check Number"),
+        ],
+        true,
+    )]
+    #[case(
+        vec![
+            ("memo", "Memo"),
+            ("amount", "Amount"),
+            ("date", "Posting Date"),
+            ("payee", "Description"),
+            ("category", "Transaction Category"),
+            ("check", "Check Number"),
+        ],
+        true,
+    )]
+    fn test_validate(
+        #[case] given: Vec<(&str, &str)>,
+        #[case] expected: bool,
+        identify: Vec<String>,
+    ) {
+        let label = "testing";
+        let result = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(given))
+            .validate()
+            .is_ok();
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(
+        vec![("date", "Posting Date")],
+        vec![
+            ("Transaction ID", "12345"),
+            ("Date", "2022-03-04"),
+            ("Amount", "-14.53"),
+            ("Check Number", "1234"),
+            ("Description", "ACE"),
+            ("Transaction Category", "Hardware"),
+            ("Memo", "Things"),
+        ]
+    )]
+    #[case(
+        vec![
+            ("date", "Posting Date"),
+            ("check", "Check Number"),
+            ("payee", "Description"),
+            ("category", "Transaction Category"),
+        ],
+        vec![
+            ("Transaction ID", "12345"),
+            ("Date", "2022-03-04"),
+            ("Amount", "-14.53"),
+            ("Check#", "1234"),
+            ("Payee", "ACE"),
+            ("Category", "Hardware"),
+            ("Memo", "Things"),
+        ]
+    )]
+    fn test_remap(
+        #[case] translate: Vec<(&str, &str)>,
+        #[case] expected: Vec<(&str, &str)>,
+        identify: Vec<String>,
+    ) {
+        let label = "testing";
+        let mapping = vec![
+            ("Transaction ID", "12345"),
+            ("Posting Date", "2022-03-04"),
+            ("Amount", "-14.53"),
+            ("Check Number", "1234"),
+            ("Description", "ACE"),
+            ("Transaction Category", "Hardware"),
+            ("Memo", "Things"),
+        ];
+        let obj = MappingRulesCsv::new(label.to_string(), identify, as_hashmap(translate));
+        assert_eq!(obj.remap(as_hashmap(mapping)), as_hashmap(expected));
+    }
 }

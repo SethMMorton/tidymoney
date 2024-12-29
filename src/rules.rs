@@ -101,6 +101,9 @@ impl RuleFileData {
     /// Ensure the read-in rules make logical sense.
     fn validate(&self) -> Result<()> {
         self.paths.validate()?;
+        for mapping in &self.mappings.csv {
+            mapping.validate()?;
+        }
 
         // Verify that each of the rules is unique.
         let mut check: HashMap<&PayeeRules, &String> = HashMap::new();
