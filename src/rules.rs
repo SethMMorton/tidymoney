@@ -232,6 +232,7 @@ mod test {
         label = "pnc"
         identify = ["Date", "Reference Number", "Payee", "Address", "Amount"]
         date_fmt = "%Y/%m/%d"
+        debit_is_positive = true
 
         [[mappings.csv]]
         label = "ally"
@@ -311,6 +312,7 @@ mod test {
                             .collect(),
                         [].into(),
                         Some("%Y/%m/%d".to_owned()),
+                        true,
                     ),
                     MappingRulesCsv::new(
                         "ally".to_string(),
@@ -323,6 +325,7 @@ mod test {
                             .map(|(x, y)| (x.to_string(), y.to_string()))
                             .collect(),
                         None,
+                        false,
                     ),
                 ],
             },
@@ -357,6 +360,7 @@ mod test {
                         .collect(),
                     [].into(),
                     None,
+                    false,
                 )],
             },
             paths: AuxillaryPaths::new(
