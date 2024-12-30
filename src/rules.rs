@@ -323,7 +323,7 @@ mod test {
                     ),
                 ],
             },
-            paths: AuxillaryPaths::new(storage.canonicalize().unwrap()),
+            paths: AuxillaryPaths::new(storage),
         };
         let result = RuleFileData::new(&given).unwrap();
         assert_eq!(result, expected);
@@ -354,7 +354,7 @@ mod test {
                     false,
                 )],
             },
-            paths: AuxillaryPaths::new(storage.canonicalize().unwrap()),
+            paths: AuxillaryPaths::new(storage),
         };
         let result = RuleFileData::new(&given).unwrap();
         assert_eq!(result, expected);

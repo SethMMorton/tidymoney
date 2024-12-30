@@ -9,7 +9,7 @@ pub const DATE_FORMAT: &'static str = "%Y-%m-%d";
 
 /// Based on the rules file path, return where the timestamps path should be.
 /// The file need not yet exist, so do no validation on that front.
-pub fn timestamps_path<P: AsRef<Path>>(rules_path: P) -> Result<PathBuf> {
+pub fn timestamps_path(rules_path: impl AsRef<Path>) -> Result<PathBuf> {
     let rules = rules_path.as_ref();
     let parent = rules
         .parent()

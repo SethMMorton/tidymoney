@@ -1,11 +1,19 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
-use expanduser::expanduser;
 use serde::{Deserialize, Deserializer};
+use simple_expand_tilde::expand_tilde;
 
 #[cfg(test)]
 use std::convert::Into;
+
+/// Expand '~' and cannoicalize the given path.
+pub fn normalize_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    Ok(
+        expand_tilde(path.as_ref())
+            .ok_or_else(|| anyhow!("Cannot expand ~ to a home directory"))?,
+    )
+}
 
 /// Paths used by the program for various purposes.
 #[derive(Debug, Deserialize, PartialEq)]
@@ -45,10 +53,7 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    expanduser(s)
-        .map_err(serde::de::Error::custom)?
-        .canonicalize()
-        .map_err(serde::de::Error::custom)
+    normalize_path(s).map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]
@@ -62,24 +67,30 @@ mod test {
     }
 
     #[test]
+    fn test_normaize_path() {
+        let given = "~/location";
+        let result = normalize_path(given).unwrap();
+        assert_ne!(result, PathBuf::from(given));
+    }
+
+    #[test]
     fn test_storage_must_exist() {
-        let temp = tempdir::TempDir::new("test").unwrap();
-        let stamps = temp.path().join("file.json");
-        fs::write(&stamps, "{}").unwrap();
         let parsed = parse_toml("/does/not/exist");
         assert!(parsed
+            .unwrap()
+            .validate()
             .err()
             .unwrap()
             .to_string()
-            .contains("No such file or directory"));
+            .contains("is not a directory"));
     }
 
     #[test]
     fn test_storage_must_be_a_directory() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let stamps = temp.path().join("file.json");
-        fs::write(&stamps, "{}").unwrap();
-        let path = stamps.as_os_str().to_str().unwrap();
+        let storage = temp.path().join("file.json");
+        fs::write(&storage, "{}").unwrap();
+        let path = storage.as_os_str().to_str().unwrap();
         let parsed = parse_toml(&path);
         assert!(parsed
             .unwrap()
