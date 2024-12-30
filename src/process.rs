@@ -110,23 +110,23 @@ pub fn process_csv_files<'a>(
 }
 
 /// Account for the current timestamp in all transactions.
-pub fn account_for_dates_in_transactions<'a>(
+pub fn account_for_dates_in_transactions(
     now: &NaiveDate,
-    all_transactions: &mut HashMap<String, TransactionProcessor<'a>>,
+    all_transactions: &mut HashMap<String, TransactionProcessor>,
     stamps: &mut TimestampKeeper,
 ) {
     for (label, transactions) in all_transactions.iter_mut() {
-        let start = stamps.get_date(&label);
-        transactions.drop_uneeded(&start, &now);
-        stamps.update_date(&label, &now);
+        let start = stamps.get_date(label);
+        transactions.drop_uneeded(&start, now);
+        stamps.update_date(label, now);
     }
 }
 
 /// Write all transactions to the appropriate file.
-pub fn write_transactions_to_file<'a>(
+pub fn write_transactions_to_file(
     now: impl AsRef<str>,
     storage: impl AsRef<Path>,
-    all_transactions: &HashMap<String, TransactionProcessor<'a>>,
+    all_transactions: &HashMap<String, TransactionProcessor>,
 ) -> Result<()> {
     // TODO: ensure path exists.
     let base = storage.as_ref().join("new").join(now.as_ref());

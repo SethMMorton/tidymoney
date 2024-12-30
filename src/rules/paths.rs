@@ -9,10 +9,8 @@ use std::convert::Into;
 
 /// Expand '~' and cannoicalize the given path.
 pub fn normalize_path(path: impl AsRef<Path>) -> Result<PathBuf> {
-    Ok(
-        expand_tilde(path.as_ref())
-            .ok_or_else(|| anyhow!("Cannot expand ~ to a home directory"))?,
-    )
+    expand_tilde(path.as_ref())
+        .ok_or_else(|| anyhow!("Cannot expand ~ to a home directory"))
 }
 
 /// Paths used by the program for various purposes.

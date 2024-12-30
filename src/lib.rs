@@ -68,11 +68,11 @@ impl NormalizedBankData {
 
         // Calculate the values of all the fields and return.
         return Ok(NormalizedBankData {
-            date: NaiveDate::parse_from_str(&date_str, date_fmt.as_ref())?,
+            date: NaiveDate::parse_from_str(date_str, date_fmt.as_ref())?,
             payee: payee_str.to_owned(),
-            category: mapping.get("Category").and_then(|x| Some(x.to_owned())),
-            memo: mapping.get("Memo").and_then(|x| Some(x.to_owned())),
-            amount: interpret_dollar_amount(&amount_str, negate),
+            category: mapping.get("Category").map(|x| x.to_owned()),
+            memo: mapping.get("Memo").map(|x| x.to_owned()),
+            amount: interpret_dollar_amount(amount_str, negate),
             check: mapping.get("Check#").and_then(|x| x.parse().ok()),
             orig_payee: payee_str.to_owned(),
         });

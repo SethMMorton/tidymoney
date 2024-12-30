@@ -55,10 +55,10 @@ where
     match s {
         Some(s) => {
             let regex = Regex::new(&s).map_err(serde::de::Error::custom)?;
-            return Ok(Some(EqRegex::from(regex)));
+            Ok(Some(EqRegex::from(regex)))
         }
         None => {
-            return Ok(None);
+            Ok(None)
         }
     }
 }

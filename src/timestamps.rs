@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use chrono::NaiveDate;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-pub const DATE_FORMAT: &'static str = "%Y-%m-%d";
+pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
 /// Based on the rules file path, return where the timestamps path should be.
 /// The file need not yet exist, so do no validation on that front.

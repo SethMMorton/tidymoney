@@ -50,14 +50,8 @@ impl RuleFileData {
         let hdrs: Vec<String> = headers.iter().map(|x| x.to_owned()).collect();
 
         // Identify the mapping rules that match the headers found.
-        for candidates in self.mappings.csv.iter() {
-            if candidates.header_matches(&hdrs) {
-                return Some(candidates);
-            }
-        }
-
         // If no rules were found, return None.
-        None
+        self.mappings.csv.iter().find(|&candidates| candidates.header_matches(&hdrs))
     }
 
     /// Run the transaction through the updating functions.
@@ -71,7 +65,7 @@ impl RuleFileData {
     fn update_payee(&self, transaction: &mut NormalizedBankData) {
         for (payee, candidates) in &self.payees {
             for candidate in candidates {
-                if candidate.transaction_matches(&transaction) {
+                if candidate.transaction_matches(transaction) {
                     transaction.payee = payee.to_owned();
                     break;
                 }
@@ -115,17 +109,17 @@ impl RuleFileData {
         }
 
         // Verify that each of the rules is unique.
+        #[allow(clippy::mutable_key_type)]
         let mut check: HashMap<&PayeeRules, &String> = HashMap::new();
         for (payee, rules) in self.payees.iter() {
             for rule in rules.iter() {
                 if check.contains_key(&rule) {
                     let other = check[rule];
-                    let values;
-                    if other < payee {
-                        values = (other, payee);
+                    let values = if other < payee {
+                        (other, payee)
                     } else {
-                        values = (payee, other)
-                    }
+                        (payee, other)
+                    };
                     return Err(anyhow!(format!(
                         "The payees {:#?} and {:#?} both implement identical rules.",
                         values.0, values.1
@@ -139,14 +133,14 @@ impl RuleFileData {
         if let Some(c) = &self.categories {
             for (cat_name, categories) in c {
                 for category in categories {
-                    category.validate("category", &cat_name)?;
+                    category.validate("category", cat_name)?;
                 }
             }
         }
         if let Some(m) = &self.memos {
             for (memo_name, memos) in m {
                 for memo in memos {
-                    memo.validate("memo", &memo_name)?;
+                    memo.validate("memo", memo_name)?;
                 }
             }
         }
