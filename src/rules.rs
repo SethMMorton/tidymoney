@@ -165,25 +165,19 @@ mod test {
 
     use crate::as_hashmap;
 
-    fn aux_paths(temp: &tempdir::TempDir) -> (PathBuf, PathBuf) {
-        // Create the auxillary paths and their locations.
+    fn aux_paths(temp: &tempdir::TempDir) -> PathBuf {
         let storage = temp.path().join("storage");
-        let stamps = temp.path().join("timestamps.json");
         fs::create_dir(&storage).unwrap();
-        fs::write(&stamps, "{}").unwrap();
-
-        // Return the timestamps and storage location.
-        (stamps, storage)
+        storage
     }
 
-    fn paths_section(stamps: &PathBuf, storage: &PathBuf) -> String {
+    fn paths_section(storage: &PathBuf) -> String {
         format!(
             indoc! { r#"
             [paths]
-            timestamps = {:#?}
             storage = {:#?}
             "# },
-            stamps, storage
+            storage
         )
     }
 
@@ -203,7 +197,7 @@ mod test {
     #[test]
     fn test_rule_file_with_everything() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let (stamps, storage) = aux_paths(&temp);
+        let storage = aux_paths(&temp);
 
         let given = indoc! { r#"
         [payees]
@@ -241,7 +235,7 @@ mod test {
 
         "# }
         .to_string()
-            + &paths_section(&stamps, &storage);
+            + &paths_section(&storage);
         let expected = RuleFileData {
             payees: HashMap::from([
                 (
@@ -329,10 +323,7 @@ mod test {
                     ),
                 ],
             },
-            paths: AuxillaryPaths::new(
-                stamps.canonicalize().unwrap(),
-                storage.canonicalize().unwrap(),
-            ),
+            paths: AuxillaryPaths::new(storage.canonicalize().unwrap()),
         };
         let result = RuleFileData::new(&given).unwrap();
         assert_eq!(result, expected);
@@ -341,9 +332,9 @@ mod test {
     #[test]
     fn test_rule_file_without_memo_and_category() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let (stamps, storage) = aux_paths(&temp);
+        let storage = aux_paths(&temp);
 
-        let given = minimal_rules() + &paths_section(&stamps, &storage);
+        let given = minimal_rules() + &paths_section(&storage);
         let expected = RuleFileData {
             payees: HashMap::from([(
                 "Apple".to_string(),
@@ -363,10 +354,7 @@ mod test {
                     false,
                 )],
             },
-            paths: AuxillaryPaths::new(
-                stamps.canonicalize().unwrap(),
-                storage.canonicalize().unwrap(),
-            ),
+            paths: AuxillaryPaths::new(storage.canonicalize().unwrap()),
         };
         let result = RuleFileData::new(&given).unwrap();
         assert_eq!(result, expected);
@@ -375,13 +363,13 @@ mod test {
     #[test]
     fn test_categories_requires_mapping() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let (stamps, storage) = aux_paths(&temp);
+        let storage = aux_paths(&temp);
 
         let given = minimal_rules()
             + indoc! { r#"
         [categories]
         Dining = "Subway"
-        "# } + &paths_section(&stamps, &storage);
+        "# } + &paths_section(&storage);
         assert!(RuleFileData::new(&given)
             .err()
             .unwrap()
@@ -392,13 +380,13 @@ mod test {
     #[test]
     fn test_memos_requires_mapping() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let (stamps, storage) = aux_paths(&temp);
+        let storage = aux_paths(&temp);
 
         let given = minimal_rules()
             + indoc! { r#"
         [memos]
         Sandwich = "Subway"
-        "# } + &paths_section(&stamps, &storage);
+        "# } + &paths_section(&storage);
         assert!(RuleFileData::new(&given)
             .err()
             .unwrap()
@@ -409,7 +397,7 @@ mod test {
     #[test]
     fn test_cannot_repeat_patterns() {
         let temp = tempdir::TempDir::new("test").unwrap();
-        let (stamps, storage) = aux_paths(&temp);
+        let storage = aux_paths(&temp);
 
         let given = indoc! { r#"
         [payees]
@@ -428,7 +416,7 @@ mod test {
 
         "# }
         .to_string()
-            + &paths_section(&stamps, &storage);
+            + &paths_section(&storage);
         assert_eq!(
             r#"The payees "Apple" and "Microsoft" both implement identical rules."#,
             RuleFileData::new(&given).err().unwrap().to_string()

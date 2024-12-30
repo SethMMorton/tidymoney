@@ -1,10 +1,22 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::NaiveDate;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub const DATE_FORMAT: &'static str = "%Y-%m-%d";
+
+/// Based on the rules file path, return where the timestamps path should be.
+/// The file need not yet exist, so do no validation on that front.
+pub fn timestamps_path<P: AsRef<Path>>(rules_path: P) -> Result<PathBuf> {
+    let rules = rules_path.as_ref();
+    let parent = rules
+        .parent()
+        .ok_or_else(|| anyhow!(format!("Cannot get the directory name of {:#?}", rules)))?;
+    let stamps = parent.join("timestamps.json");
+    Ok(stamps)
+}
 
 /// Instructions on how to serialize a date object.
 pub fn serialize_date<S>(dt: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
@@ -87,9 +99,19 @@ impl TimestampKeeper {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use super::*;
 
     use indoc::indoc;
+
+    #[test]
+    fn test_timestamps_path() {
+        let given = "/this/is/my/path/to/rules.toml";
+        let expected = PathBuf::from_str("/this/is/my/path/to/timestamps.json").unwrap();
+        let result = timestamps_path(given).unwrap();
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn test_timestamp_tracking() {
