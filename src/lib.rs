@@ -1,4 +1,5 @@
 mod file_io;
+mod process;
 mod rules;
 mod timestamps;
 
@@ -9,8 +10,14 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-pub use crate::rules::RuleFileData;
-use crate::timestamps::{serialize_date, DATE_FORMAT};
+use crate::timestamps::serialize_date;
+
+pub use crate::file_io::store_raw_transactions;
+pub use crate::process::{
+    account_for_dates_in_transactions, process_csv_files, write_transactions_to_file,
+};
+pub use crate::rules::{normalize_path, RuleFileData};
+pub use crate::timestamps::{timestamps_path, TimestampKeeper, DATE_FORMAT};
 
 /// Container for bank data to be serialized into the normalized CSV.
 #[derive(Debug, Serialize)]

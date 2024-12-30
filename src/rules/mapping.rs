@@ -9,17 +9,17 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 pub struct MappingRulesCsv {
     /// The label to give this account type.
-    label: String,
+    pub label: String,
     /// The columns to expect from this account type.
     identify: Vec<String>,
     /// How to map the given column names to output column names.
     translate: Option<RemapValuesCsv>,
     /// The format string for dates for this rule set.
     #[serde(default = "default_fmt_string")]
-    date_fmt: String,
+    pub date_fmt: String,
     /// Whether or not we need to negate the value of a transaction.
     #[serde(rename = "debit_is_positive", default)]
-    negate: bool,
+    pub negate: bool,
 }
 
 /// The default format string to use if not specified.

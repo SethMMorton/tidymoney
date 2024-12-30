@@ -57,8 +57,8 @@ pub struct TimestampKeeper {
 
 impl TimestampKeeper {
     /// Create a new TimestampKeeper by reading a raw JSON string.
-    pub fn new(raw_data: &str) -> Result<Self> {
-        let dates_as_vec: Vec<AccountDate> = serde_json::from_str(raw_data)?;
+    pub fn new(raw_data: impl AsRef<str>) -> Result<Self> {
+        let dates_as_vec: Vec<AccountDate> = serde_json::from_str(raw_data.as_ref())?;
         let dates: HashMap<String, NaiveDate> = dates_as_vec
             .iter()
             .map(|element| (element.account.to_owned(), element.date))
@@ -81,14 +81,23 @@ impl TimestampKeeper {
     }
 
     /// Update the date stored for a given account if it is later than the stored date.
-    pub fn update_date(&mut self, account: &str, date: &NaiveDate) {
+    pub fn update_date(&mut self, account: impl AsRef<str>, date: &NaiveDate) {
         let this_date = self
             .dates
-            .entry(account.to_owned())
+            .entry(account.as_ref().to_owned())
             .or_insert(TimestampKeeper::early());
         if date > this_date {
-            self.dates.insert(account.to_string(), *date);
+            self.dates.insert(account.as_ref().to_string(), *date);
         }
+    }
+
+    /// Get the current date for a given account, defaulting to "early"
+    /// if does not yet exist for that account.
+    pub fn get_date(&self, account: impl AsRef<str>) -> NaiveDate {
+        self.dates
+            .get(account.as_ref())
+            .unwrap_or(&Self::early())
+            .to_owned()
     }
 
     /// An early date.

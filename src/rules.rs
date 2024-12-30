@@ -10,10 +10,12 @@ use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
 use crate::rules::category_and_memo::{hashmap_cat_memo_rules, CategoryAndMemoRules};
-use crate::rules::mapping::MappingRulesCsv;
 use crate::rules::paths::AuxillaryPaths;
 use crate::rules::payees::{hashmap_payee_rules, PayeeRules};
 use crate::NormalizedBankData;
+
+pub use crate::rules::mapping::MappingRulesCsv;
+pub use crate::rules::paths::normalize_path;
 
 /// The aggregation of all rules found in the rules file.
 #[derive(Debug, Deserialize, PartialEq)]
@@ -31,7 +33,7 @@ pub struct RuleFileData {
     /// Rules for how to identify and translate files for different account types.
     mappings: MappingTypes,
     /// Locations of paths used by the program.
-    paths: AuxillaryPaths,
+    pub paths: AuxillaryPaths,
 }
 
 impl RuleFileData {
@@ -42,7 +44,7 @@ impl RuleFileData {
         Ok(rules)
     }
 
-    /// Determine which account the given headers correlate to.
+    /// Determine to which account the given headers correlate.
     pub fn get_csv_mapping_rules(&self, headers: &csv::StringRecord) -> Option<&MappingRulesCsv> {
         // Convert the headers object into a vector of strings so it can be compared.
         let hdrs: Vec<String> = headers.iter().map(|x| x.to_owned()).collect();
@@ -56,6 +58,13 @@ impl RuleFileData {
 
         // If no rules were found, return None.
         None
+    }
+
+    /// Run the transaction through the updating functions.
+    pub fn update_transaction(&self, transaction: &mut NormalizedBankData) {
+        self.update_payee(transaction);
+        self.update_category(transaction);
+        self.update_memo(transaction);
     }
 
     /// Determine a better payee name if available.

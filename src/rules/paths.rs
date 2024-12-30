@@ -21,7 +21,7 @@ pub fn normalize_path(path: impl AsRef<Path>) -> Result<PathBuf> {
 pub struct AuxillaryPaths {
     /// The path to the directory where old and new CSV files will be stored.
     #[serde(deserialize_with = "deserialize_path")]
-    storage: PathBuf,
+    pub storage: PathBuf,
 }
 
 impl AuxillaryPaths {
