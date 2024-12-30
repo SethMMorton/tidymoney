@@ -36,8 +36,8 @@ pub struct RuleFileData {
 
 impl RuleFileData {
     // Create a new RuleFileData from raw string data.
-    pub fn new(raw_data: &str) -> Result<Self> {
-        let rules: RuleFileData = toml::from_str(raw_data)?;
+    pub fn new(raw_data: impl AsRef<str>) -> Result<Self> {
+        let rules: RuleFileData = toml::from_str(raw_data.as_ref())?;
         rules.validate()?;
         Ok(rules)
     }

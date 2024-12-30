@@ -36,10 +36,7 @@ pub struct CategoryAndMemoRules {
 impl CategoryAndMemoRules {
     /// Construct a new object - only needed for testing.
     #[cfg(test)]
-    pub fn new(
-        mapping: HashMap<String, String>,
-        // orig_payee: Option<EqRegex>,
-    ) -> Self {
+    pub fn new(mapping: HashMap<String, String>) -> Self {
         let payee = mapping.get("payee").and_then(|x| Some(x.to_owned()));
         let category = mapping.get("category").and_then(|x| Some(x.to_owned()));
         let amount = mapping
@@ -198,7 +195,7 @@ mod test {
 
     #[test]
     fn test_categories_must_give_at_least_one_rule() {
-        let obj = CategoryAndMemoRules::new(as_hashmap(vec![]));
+        let obj = CategoryAndMemoRules::new(HashMap::new());
         assert!(!obj.check_at_least_one());
         assert_eq!(
             obj.validate("category", "Dining")
@@ -211,7 +208,7 @@ mod test {
 
     #[test]
     fn test_memos_must_give_at_least_one_rule() {
-        let obj = CategoryAndMemoRules::new(as_hashmap(vec![]));
+        let obj = CategoryAndMemoRules::new(HashMap::new());
         assert!(!obj.check_at_least_one());
         assert_eq!(
             obj.validate("memo", "Sandwich").err().unwrap().to_string(),

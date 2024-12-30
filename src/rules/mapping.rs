@@ -225,9 +225,8 @@ mod test {
         identify: Vec<String>,
     ) {
         let label = "testing";
-        let result =
-            MappingRulesCsv::new(label.to_string(), identify, as_hashmap(vec![]), None, false)
-                .header_matches(&given.into_iter().map(|x| x.to_string()).collect());
+        let result = MappingRulesCsv::new(label.to_string(), identify, HashMap::new(), None, false)
+            .header_matches(&given.into_iter().map(|x| x.to_string()).collect());
         assert_eq!(result, expected);
     }
 

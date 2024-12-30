@@ -80,7 +80,6 @@ impl FromStr for PayeeRules {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(PayeeRules {
-            // TODO: Return an error instead of panicking
             pattern: EqRegex(Regex::new(s).unwrap()),
             min_amount: None,
             max_amount: None,

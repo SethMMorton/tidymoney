@@ -38,25 +38,30 @@ impl NormalizedBankData {
     pub fn from_raw_data(
         mapping: HashMap<String, String>,
         negate: bool,
-        date_fmt: &str,
-        label: &str,
+        date_fmt: impl AsRef<str>,
+        label: impl AsRef<str>,
     ) -> Result<Self> {
         // Get required columns.
-        let payee_str = mapping
-            .get("Payee")
-            .ok_or_else(|| anyhow!(format!("The account '{label}' is missing the Payee column")))?;
-        let date_str = mapping
-            .get("Date")
-            .ok_or_else(|| anyhow!(format!("The account '{label}' is missing the Date column")))?;
+        let label_str = label.as_ref();
+        let payee_str = mapping.get("Payee").ok_or_else(|| {
+            anyhow!(format!(
+                "The account '{label_str}' is missing the Payee column"
+            ))
+        })?;
+        let date_str = mapping.get("Date").ok_or_else(|| {
+            anyhow!(format!(
+                "The account '{label_str}' is missing the Date column"
+            ))
+        })?;
         let amount_str = mapping.get("Amount").ok_or_else(|| {
             anyhow!(format!(
-                "The account '{label}' is missing the Amount column"
+                "The account '{label_str}' is missing the Amount column"
             ))
         })?;
 
         // Calculate the values of all the fields and return.
         return Ok(NormalizedBankData {
-            date: NaiveDate::parse_from_str(&date_str, date_fmt)?,
+            date: NaiveDate::parse_from_str(&date_str, date_fmt.as_ref())?,
             payee: payee_str.to_owned(),
             category: mapping.get("Category").and_then(|x| Some(x.to_owned())),
             memo: mapping.get("Memo").and_then(|x| Some(x.to_owned())),
@@ -76,10 +81,10 @@ impl NormalizedBankData {
 ///
 /// Some banks express this in negated values, and if that is the case
 /// the negate option can be used to re-interpret as positive.
-fn interpret_dollar_amount(amount: &str, negate: bool) -> Decimal {
+fn interpret_dollar_amount(amount: impl AsRef<str>, negate: bool) -> Decimal {
     // Convert the given value to a decimal,
     // defaulting to zero if it cannot be converted.
-    let amt = Decimal::from_str_exact(amount).unwrap_or_default();
+    let amt = Decimal::from_str_exact(amount.as_ref()).unwrap_or_default();
 
     // Return a negated version of the value if necessary.
     if negate {
@@ -91,9 +96,9 @@ fn interpret_dollar_amount(amount: &str, negate: bool) -> Decimal {
 
 /// Test helper function for converting vectors to hashmaps.
 #[cfg(test)]
-pub fn as_hashmap(data: Vec<(&str, &str)>) -> HashMap<String, String> {
+pub fn as_hashmap(data: Vec<(impl AsRef<str>, impl AsRef<str>)>) -> HashMap<String, String> {
     data.into_iter()
-        .map(|(x, y)| (x.to_owned(), y.to_owned()))
+        .map(|(x, y)| (x.as_ref().to_owned(), y.as_ref().to_owned()))
         .collect()
 }
 

@@ -15,13 +15,13 @@ fn move_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<
 }
 
 /// Move transactions as downloaded into an "old" folder marked with a timestamp.
-pub fn store_raw_transactions<P: AsRef<Path>, Q: AsRef<Path>>(
-    storage: P,
-    files: &Vec<Q>,
-    folder_base: &str,
+pub fn store_raw_transactions(
+    storage: impl AsRef<Path>,
+    files: &Vec<impl AsRef<Path>>,
+    folder_base: impl AsRef<str>,
 ) -> std::io::Result<()> {
     // Create the location for the old locations.
-    let location = storage.as_ref().join("old").join(folder_base);
+    let location = storage.as_ref().join("old").join(folder_base.as_ref());
     if !location.exists() {
         fs::create_dir_all(&location)?;
     }
