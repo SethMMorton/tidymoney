@@ -57,8 +57,6 @@ where
             let regex = Regex::new(&s).map_err(serde::de::Error::custom)?;
             Ok(Some(EqRegex::from(regex)))
         }
-        None => {
-            Ok(None)
-        }
+        None => Ok(None),
     }
 }

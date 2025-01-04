@@ -5,6 +5,7 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDate;
 
+use crate::file_io::ensure_storage_path;
 use crate::rules::MappingRulesCsv;
 use crate::rules::RuleFileData;
 use crate::{NormalizedBankData, TimestampKeeper};
@@ -128,8 +129,8 @@ pub fn write_transactions_to_file(
     storage: impl AsRef<Path>,
     all_transactions: &HashMap<String, TransactionProcessor>,
 ) -> Result<()> {
-    // TODO: ensure path exists.
-    let base = storage.as_ref().join("new").join(now.as_ref());
+    // Write all transactions to file.
+    let base = ensure_storage_path(storage, now, true)?;
     for (label, transactions) in all_transactions.iter() {
         let location = base.join(label.to_owned() + ".csv");
         fs::write(location, transactions.get_transactions_as_csv()?)?;

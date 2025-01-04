@@ -50,7 +50,7 @@ struct AccountDate {
 /// The TimestampKeeper keeps track of the most recent timestamps
 /// seen for each account, and in doing so enables filtering entries
 /// already seen.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimestampKeeper {
     dates: HashMap<String, NaiveDate>,
 }

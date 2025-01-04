@@ -1,6 +1,6 @@
 use std::convert::AsRef;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Move a file from one location to another.
 fn move_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<()> {
@@ -20,18 +20,27 @@ pub fn store_raw_transactions(
     files: &Vec<impl AsRef<Path>>,
     folder_base: impl AsRef<str>,
 ) -> std::io::Result<()> {
-    // Create the location for the old locations.
-    let location = storage.as_ref().join("old").join(folder_base.as_ref());
-    if !location.exists() {
-        fs::create_dir_all(&location)?;
-    }
-
     // Move the files from the old to the new locations.
+    let location = ensure_storage_path(storage, folder_base, false)?;
     for f in files {
         let name = f.as_ref().file_name().unwrap();
         move_file(f, location.join(name))?;
     }
     Ok(())
+}
+
+/// Construct the storage location, ensure it exists, and return it.
+pub fn ensure_storage_path(
+    storage: impl AsRef<Path>,
+    base: impl AsRef<str>,
+    new: bool,
+) -> std::io::Result<PathBuf> {
+    let mid = if new { "new" } else { "old" };
+    let location = storage.as_ref().join(mid).join(base.as_ref());
+    if !location.exists() {
+        fs::create_dir_all(&location)?;
+    }
+    Ok(location)
 }
 
 #[cfg(test)]
@@ -40,6 +49,7 @@ mod test {
 
     use std::path::PathBuf;
 
+    use rstest::rstest;
     use tempdir;
 
     #[test]
@@ -89,5 +99,24 @@ mod test {
             let path = base1.join(format!("file{i}.csv"));
             assert!(fs::exists(path).unwrap());
         }
+    }
+
+    #[rstest]
+    #[case(false, "old/the-base")]
+    #[case(true, "new/the-base")]
+    fn test_ensure_storage_path(#[case] old_new: bool, #[case] expected: impl AsRef<Path>) {
+        let temp = tempdir::TempDir::new("test").unwrap();
+        let expected = temp.path().join(expected.as_ref());
+        assert!(!expected.is_dir()); // expected does not yet exist
+
+        let result = ensure_storage_path(temp.path(), "the-base", old_new).unwrap();
+        assert_eq!(result, expected);
+        assert!(expected.is_dir()); // expected now exists
+
+        // Can be repeated (OK that it already exists).
+        assert_eq!(
+            expected,
+            ensure_storage_path(temp.path(), "the-base", old_new).unwrap()
+        );
     }
 }

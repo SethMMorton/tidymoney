@@ -51,7 +51,10 @@ impl RuleFileData {
 
         // Identify the mapping rules that match the headers found.
         // If no rules were found, return None.
-        self.mappings.csv.iter().find(|&candidates| candidates.header_matches(&hdrs))
+        self.mappings
+            .csv
+            .iter()
+            .find(|&candidates| candidates.header_matches(&hdrs))
     }
 
     /// Run the transaction through the updating functions.
@@ -205,14 +208,14 @@ mod test {
         let given = indoc! { r#"
         [payees]
         Apple = "APPLE"
-        Hulu = {Pattern = "PAYPAL INST TXFR", Amount = -24.00}
+        Hulu = {Pattern = "PAYPAL INST TXFR", Amount = 24.00}
         Ace = [
             "ACE HARDWARE",
-            {Pattern = "HARDWARE", MaxAmount = -20.00},
+            {Pattern = "HARDWARE", MaxAmount = 20.00},
         ]
 
         [categories]
-        Maintenance = {Payee = "The Home Depot", MinAmount = -50.00}
+        Maintenance = {Payee = "The Home Depot", MinAmount = 50.00}
         Dining = [
             {Payee = "Subway"},
             {Payee = "Outback Steakhouse"},
@@ -249,7 +252,7 @@ mod test {
                     "Hulu".to_string(),
                     vec![PayeeRules::new(as_hashmap(vec![
                         ("pattern", "PAYPAL INST TXFR"),
-                        ("amount", "-24.00"),
+                        ("amount", "24.00"),
                     ]))],
                 ),
                 (
@@ -258,7 +261,7 @@ mod test {
                         PayeeRules::from_str("ACE HARDWARE").unwrap(),
                         PayeeRules::new(as_hashmap(vec![
                             ("pattern", "HARDWARE"),
-                            ("max_amount", "-20.00"),
+                            ("max_amount", "20.00"),
                         ])),
                     ],
                 ),
@@ -268,7 +271,7 @@ mod test {
                     "Maintenance".to_string(),
                     vec![CategoryAndMemoRules::new(as_hashmap(vec![
                         ("payee", "The Home Depot"),
-                        ("min_amount", "-50.00"),
+                        ("min_amount", "50.00"),
                     ]))],
                 ),
                 (
@@ -405,12 +408,12 @@ mod test {
         let given = indoc! { r#"
         [payees]
         "Apple" = [
-            {Pattern = "PAYPAL", MinAmount = -50.00},
+            {Pattern = "PAYPAL", MinAmount = 50.00},
             "APPLE",
         ]
         "Microsoft" = [
             "MICROSOFT",
-            {Pattern = "PAYPAL", MinAmount = -50.00},
+            {Pattern = "PAYPAL", MinAmount = 50.00},
         ]
 
         [[mappings.csv]]

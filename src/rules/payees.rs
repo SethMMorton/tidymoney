@@ -80,7 +80,9 @@ impl FromStr for PayeeRules {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(PayeeRules {
-            pattern: EqRegex(Regex::new(s).unwrap()),
+            pattern: EqRegex(Regex::new(s).expect(&format!(
+                "Could not parse the string {s} as a regular expression"
+            ))),
             min_amount: None,
             max_amount: None,
             amount: None,

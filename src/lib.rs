@@ -68,7 +68,11 @@ impl NormalizedBankData {
 
         // Calculate the values of all the fields and return.
         return Ok(NormalizedBankData {
-            date: NaiveDate::parse_from_str(date_str, date_fmt.as_ref())?,
+            date: NaiveDate::parse_from_str(date_str, date_fmt.as_ref()).or(Err(anyhow!(
+                "Cannot parse the date {:#?} with the format string {:#?}",
+                date_str,
+                date_fmt.as_ref()
+            )))?,
             payee: payee_str.to_owned(),
             category: mapping.get("Category").map(|x| x.to_owned()),
             memo: mapping.get("Memo").map(|x| x.to_owned()),
@@ -102,10 +106,9 @@ fn interpret_dollar_amount(amount: impl AsRef<str>, negate: bool) -> Decimal {
 }
 
 /// Test helper function for converting vectors to hashmaps.
-#[cfg(test)]
-pub fn as_hashmap(data: Vec<(impl AsRef<str>, impl AsRef<str>)>) -> HashMap<String, String> {
+pub fn as_hashmap(data: Vec<(impl Into<String>, impl Into<String>)>) -> HashMap<String, String> {
     data.into_iter()
-        .map(|(x, y)| (x.as_ref().to_owned(), y.as_ref().to_owned()))
+        .map(|(x, y)| (x.into(), y.into()))
         .collect()
 }
 
