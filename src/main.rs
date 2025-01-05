@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
@@ -22,6 +22,8 @@ struct Cli {
 enum Commands {
     #[command(about = "Run the tidymoney logic")]
     Run { files: Vec<String> },
+    #[command(about = "Edit the rules.toml file in $EDITOR")]
+    EditConfig {},
     #[command(about = "Show the location of the rules.toml file")]
     ShowConfig {},
     #[command(about = "Create the rules.toml file")]
@@ -49,7 +51,7 @@ fn main() -> Result<()> {
             fs::write(
                 rule_file,
                 indoc! {
-                    r#"
+                r#"
                 [payees]
                 Description = "RULE FOR NAMING TRANSACTION"
 
@@ -68,20 +70,20 @@ fn main() -> Result<()> {
                 },
             )?;
             println!("Created {:#?}.\n", get_rule_file()?);
-            println!("Edit this file to meet your needs.\n");
-            println!("See URL for instructions.");
+            println!("You can use 'tidymoney edit-config' to edit this file.\n");
+            println!("See https://github.com/SethMMorton/tidymoney for instructions.");
         }
         Commands::ShowConfig {} => {
             println!("{}", get_rule_file()?.to_str().unwrap());
         }
+        Commands::EditConfig {} => {
+            let rule_file = get_rule_file()?;
+            check_rule_file_exists(&rule_file)?;
+            edit::edit_file(rule_file)?;
+        }
         Commands::Run { files } => {
             let rule_file = get_rule_file()?;
-            if !rule_file.is_file() {
-                return Err(anyhow!(format!(
-                    "The file {:#?} does not exist - create it with 'tidymoney create-config'.",
-                    rule_file
-                )));
-            }
+            check_rule_file_exists(&rule_file)?;
             let stamps_file = timestamps_path(&rule_file)?;
 
             // Get the internal data from disk.
@@ -109,6 +111,17 @@ fn main() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+// Ensure the rule file exists.
+fn check_rule_file_exists(rule_file: impl AsRef<Path>) -> Result<()> {
+    if !rule_file.as_ref().is_file() {
+        return Err(anyhow!(format!(
+            "The file {:#?} does not exist - create it with 'tidymoney create-config'.",
+            rule_file.as_ref()
+        )));
+    }
     Ok(())
 }
 
