@@ -126,13 +126,13 @@ fn sample_rule_file(tempdir: impl AsRef<Path>) -> String {
         {Payee = "Outback Steakhouse"},
     ]
     Insurance = {Payee = "XYZ Insurance"}
-    "Net Income" = {Payee = "Salary", IncomeOK = true}
-    Payment = {Payee = "Credit Card Payment", IncomeOK = true}
-    Savings = {Payee = "Transfer", IncomeOK = true}
+    "Net Income" = {Payee = "Salary"}
+    Payment = {Payee = "Credit Card Payment"}
+    Savings = {Payee = "Transfer"}
     Travel = {Payee = "Local Public Transit"}
 
     [memos]
-    "Surprise!" = {OrigPayee = "Surprise", IncomeOK = true, Category = "Savings"}
+    "Surprise!" = {OrigPayee = "Surprise", Category = "Savings"}
     Parking = [
         {OrigPayee = "PARKING"},
         {Payee = "Johnson Garage"}

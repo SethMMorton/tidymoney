@@ -96,7 +96,7 @@ The fields you can use to match a transaction are:
 - `MinAmount` - A lower range for the dollar amount of the transaction.
 - `MaxAmount` - An upper range for the dollar amount of the transaction.
 - `IncomeOk` - Whether or not income (a credit) can be considered - the
-               default is `false`
+               default is `true`
 - `OrigPayee` - This is a regular expression that will match the
                 value in the payee column *as downloaded from your bank*.
 
@@ -112,7 +112,7 @@ Dining = [
     {Payee = "Outback Steakhouse"},
 ]
 Insurance = {Payee = "XYZ Insurance", MinAmount = 50.00, MaxAmount = 75.00}
-Payment = {Payee = "Credit Card Payment", IncomeOK = true}
+Payment = {Payee = "Credit Card Payment"}
 ```
 
 ### The `[memos]` section
@@ -127,7 +127,7 @@ that might have been added when processing the `[categories]` section.
 
 ```toml
 [memos]
-"Interest" = {OrigPayee = "Interest Income", IncomeOK = true, Category = "Savings"}
+"Interest" = {OrigPayee = "Interest Income", Category = "Savings"}
 Parking = [
     {OrigPayee = "PARKING"},
     {Payee = "Johnson Garage"}

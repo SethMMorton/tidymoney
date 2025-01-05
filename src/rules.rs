@@ -222,9 +222,9 @@ mod test {
         ]
 
         [memos]
-        "Round-up" = {OrigPayee = "PNC", IncomeOK = true, Category = "Savings"}
+        "Round-up" = {OrigPayee = "PNC", Category = "Savings"}
         Parking = [
-            {OrigPayee = "PARKING"},
+            {OrigPayee = "PARKING", IncomeOK = false},
             {Payee = "Johnson Garage"}
         ]
 
@@ -291,13 +291,12 @@ mod test {
                     vec![CategoryAndMemoRules::new(as_hashmap(vec![
                         ("category", "Savings"),
                         ("orig_payee", "PNC"),
-                        ("income_ok", "true"),
                     ]))],
                 ),
                 (
                     "Parking".to_string(),
                     vec![
-                        CategoryAndMemoRules::new(as_hashmap(vec![("orig_payee", "PARKING")])),
+                        CategoryAndMemoRules::new(as_hashmap(vec![("orig_payee", "PARKING"), ("income_ok", "false")])),
                         CategoryAndMemoRules::new(as_hashmap(vec![("payee", "Johnson Garage")])),
                     ],
                 ),

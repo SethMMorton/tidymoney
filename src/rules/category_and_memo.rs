@@ -26,11 +26,16 @@ pub struct CategoryAndMemoRules {
     /// The upper range of the transaction amount.
     max_amount: Option<Decimal>,
     /// Whether or not the amount can be income.
-    #[serde(default, rename = "IncomeOK")]
+    #[serde(default = "true_value", rename = "IncomeOK")]
     income_ok: bool,
     /// The payee as originally given in the raw data.
     #[serde(default, deserialize_with = "deserialize_option_regex")]
     orig_payee: Option<EqRegex>,
+}
+
+/// The TRUTH!
+fn true_value() -> bool {
+    true
 }
 
 impl CategoryAndMemoRules {
@@ -48,7 +53,9 @@ impl CategoryAndMemoRules {
         let max_amount = mapping
             .get("max_amount")
             .and_then(|x| Decimal::from_str_exact(x).ok());
-        let income_ok = mapping.get("income_ok").is_some();
+        let income_ok = mapping
+            .get("income_ok")
+            .is_none_or(|x| x.to_lowercase() == "true");
         let orig_payee = mapping
             .get("orig_payee")
             .and_then(|x| Some(EqRegex(Regex::new(x).unwrap())));
@@ -269,6 +276,11 @@ mod test {
     )]
     #[case(
         vec![],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "15.43")],
+        true,
+    )]
+    #[case(
+        vec![("income_ok", "false")],
         vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "15.43")],
         false,
     )]
