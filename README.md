@@ -2,6 +2,10 @@
 
 Clean up raw data downloaded from banks.
 
+**NOTE**: This project was a personal project, and as such has not
+been released through any formal channel, nor is under any versioning
+scheme. If there is interest then this can be releaed and versioned.
+
 `tidymoney` uses rules that you declare to transform entries in
 CSV files downloaded from banks into a format that better lends itself
 to storing in a financial accounting application. The following actions
