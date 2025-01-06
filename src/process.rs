@@ -82,10 +82,10 @@ pub fn process_csv_files<'a>(
         let mapping = rules
             .get_csv_mapping_rules(reader.headers()?)
             .ok_or_else(|| {
-                anyhow!(format!(
+                anyhow!(
                     "No rules are defined for the account corresponding to file {:#?}",
                     path.as_ref()
-                ))
+                )
             })?;
 
         // If no processor has been created for this account type, create it now.

@@ -78,10 +78,12 @@ impl MappingRulesCsv {
             for value in values {
                 if let Some(val) = &value {
                     if !self.identify.contains(val) {
-                        return Err(anyhow!(format!(
+                        return Err(anyhow!(
                             "The account {} lists {} for translation {}",
-                            "but it is not listed in identify", &self.label, val,
-                        )));
+                            "but it is not listed in identify",
+                            &self.label,
+                            val,
+                        ));
                     }
                 }
             }

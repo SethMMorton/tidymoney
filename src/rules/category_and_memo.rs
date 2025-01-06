@@ -164,9 +164,7 @@ impl CategoryAndMemoRules {
     /// Ensure the given rules are semantically correct.
     pub fn validate(&self, obj_type: &str, name: &str) -> Result<()> {
         if !self.check_at_least_one() {
-            return Err(anyhow!(format!(
-                "The {obj_type} {name:#?} must implement a rule."
-            )));
+            return Err(anyhow!("The {obj_type} {name:#?} must implement a rule."));
         }
         validate_date_filters(
             obj_type,

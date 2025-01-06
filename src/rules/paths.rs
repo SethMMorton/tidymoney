@@ -34,10 +34,10 @@ impl AuxillaryPaths {
     pub fn validate(&self) -> Result<()> {
         // The storage directory must be a directory.
         if !self.storage.is_dir() {
-            return Err(anyhow!(format!(
+            return Err(anyhow!(
                 "The storage path {:#?} is not a directory.",
                 self.storage
-            )));
+            ));
         }
 
         Ok(())

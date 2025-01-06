@@ -50,21 +50,15 @@ impl NormalizedBankData {
     ) -> Result<Self> {
         // Get required columns.
         let label_str = label.as_ref();
-        let payee_str = mapping.get("Payee").ok_or_else(|| {
-            anyhow!(format!(
-                "The account '{label_str}' is missing the Payee column"
-            ))
-        })?;
-        let date_str = mapping.get("Date").ok_or_else(|| {
-            anyhow!(format!(
-                "The account '{label_str}' is missing the Date column"
-            ))
-        })?;
-        let amount_str = mapping.get("Amount").ok_or_else(|| {
-            anyhow!(format!(
-                "The account '{label_str}' is missing the Amount column"
-            ))
-        })?;
+        let payee_str = mapping
+            .get("Payee")
+            .ok_or_else(|| anyhow!("The account '{label_str}' is missing the Payee column"))?;
+        let date_str = mapping
+            .get("Date")
+            .ok_or_else(|| anyhow!("The account '{label_str}' is missing the Date column"))?;
+        let amount_str = mapping
+            .get("Amount")
+            .ok_or_else(|| anyhow!("The account '{label_str}' is missing the Amount column"))?;
 
         // Calculate the values of all the fields and return.
         return Ok(NormalizedBankData {

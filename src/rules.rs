@@ -124,10 +124,11 @@ impl RuleFileData {
                     } else {
                         (payee, other)
                     };
-                    return Err(anyhow!(format!(
+                    return Err(anyhow!(
                         "The payees {:#?} and {:#?} both implement identical rules.",
-                        values.0, values.1
-                    )));
+                        values.0,
+                        values.1
+                    ));
                 }
                 check.insert(rule, payee);
             }

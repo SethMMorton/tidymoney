@@ -37,10 +37,7 @@ fn main() -> Result<()> {
         Commands::CreateConfig {} => {
             let rule_file = get_rule_file()?;
             if rule_file.is_file() {
-                return Err(anyhow!(format!(
-                    "The rule file {:#?} already exists.",
-                    rule_file
-                )));
+                return Err(anyhow!("The rule file {:#?} already exists.", rule_file));
             }
             let parent = rule_file
                 .parent()
@@ -117,10 +114,10 @@ fn main() -> Result<()> {
 // Ensure the rule file exists.
 fn check_rule_file_exists(rule_file: impl AsRef<Path>) -> Result<()> {
     if !rule_file.as_ref().is_file() {
-        return Err(anyhow!(format!(
+        return Err(anyhow!(
             "The file {:#?} does not exist - create it with 'tidymoney create-config'.",
             rule_file.as_ref()
-        )));
+        ));
     }
     Ok(())
 }

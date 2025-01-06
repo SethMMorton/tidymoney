@@ -154,45 +154,45 @@ pub fn validate_date_filters(
     let (min_date_in_month, max_date_in_month) = month;
     let (min_date_in_year, max_date_in_year) = year;
     if min_date_in_month.is_some_and(|x| !(1..=31).contains(&x)) {
-        return Err(anyhow!(format!(
+        return Err(anyhow!(
             "The {obj_type} {name:#?} specifies a MinDateInMonth that is not in [1, 31]."
-        )));
+        ));
     }
     if max_date_in_month.is_some_and(|x| !(1..=31).contains(&x)) {
-        return Err(anyhow!(format!(
+        return Err(anyhow!(
             "The {obj_type} {name:#?} specifies a MaxDateInMonth that is not in [1, 31]."
-        )));
+        ));
     }
     if let Some((low_month, low_day)) = min_date_in_year {
         if !(1..=31).contains(&low_day) || !(1..=12).contains(&low_month) {
-            return Err(anyhow!(format!(
+            return Err(anyhow!(
                 "The {obj_type} {name:#?} specifies a MinDateInYear where the month {}",
                 "is not in [1, 12] or the day is not in [1, 31]."
-            )));
+            ));
         }
         let last = last_date_in_month_raw(low_month);
         if low_day > last {
-            return Err(anyhow!(format!(
+            return Err(anyhow!(
                 "The {obj_type} {name:#?} {} ({low_day}) {} ({last})",
                 "specifies a MinDateInYear where the given date",
                 "is greater than the number of days in that month",
-            )));
+            ));
         }
     }
     if let Some((high_month, high_day)) = max_date_in_year {
         if !(1..=31).contains(&high_day) || !(1..=12).contains(&high_month) {
-            return Err(anyhow!(format!(
+            return Err(anyhow!(
                 "The {obj_type} {name:#?} specifies a MaxDateInYear where the month {}",
                 "is not in [1, 12] or the day is not in [1, 31]."
-            )));
+            ));
         }
         let last = last_date_in_month_raw(high_month);
         if high_day > last {
-            return Err(anyhow!(format!(
+            return Err(anyhow!(
                 "The {obj_type} {name:#?} {} ({high_day}) {} ({last})",
                 "specifies a MaxDateInYear where the given date",
                 "is greater than the number of days in that month",
-            )));
+            ));
         }
     }
     Ok(())

@@ -13,7 +13,7 @@ pub fn timestamps_path(rules_path: impl AsRef<Path>) -> Result<PathBuf> {
     let rules = rules_path.as_ref();
     let parent = rules
         .parent()
-        .ok_or_else(|| anyhow!(format!("Cannot get the directory name of {:#?}", rules)))?;
+        .ok_or_else(|| anyhow!("Cannot get the directory name of {:#?}", rules))?;
     let stamps = parent.join("timestamps.json");
     Ok(stamps)
 }
