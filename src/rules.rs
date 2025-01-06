@@ -230,7 +230,7 @@ mod test {
         ]
 
         [memos]
-        "Round-up" = {OrigPayee = "PNC", Category = "Savings"}
+        "Round-up" = {OrigPayee = "PNC", Category = "Savings", MinDateInMonth = 20}
         Parking = [
             {OrigPayee = "PARKING", IncomeOK = false},
             {Payee = "Johnson Garage"}
@@ -303,6 +303,7 @@ mod test {
                     vec![CategoryAndMemoRules::new(as_hashmap(vec![
                         ("category", "Savings"),
                         ("orig_payee", "PNC"),
+                        ("min_date_in_month", "20"),
                     ]))],
                 ),
                 (

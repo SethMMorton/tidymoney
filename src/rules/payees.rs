@@ -365,7 +365,7 @@ mod test {
     }
 
     #[test]
-    fn test_validate_is_executed() {
+    fn test_validate_works() {
         let given = vec![("pattern", "ACE"), ("max_date_in_year", "3/40")];
         let result = PayeeRules::new(as_hashmap(given)).validate("test");
         assert!(result.is_err());

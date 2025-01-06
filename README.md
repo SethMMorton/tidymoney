@@ -118,6 +118,10 @@ The fields you can use to match a transaction are:
                default is `true`
 - `OrigPayee` - This is a regular expression that will match the
                 value in the payee column *as downloaded from your bank*.
+- `MinDateInMonth` - See `[payees]`.
+- `MaxDateInMonth` - See `[payees]`.
+- `MinDateInYear` - See `[payees]`.
+- `MaxDateInYear` - See `[payees]`.
 
 Unlike `[payees]`, there are no required nor default values, so a single
 string is not allowed - you must always specify a mapping.
@@ -131,7 +135,7 @@ Dining = [
     {Payee = "Outback Steakhouse"},
 ]
 Insurance = {Payee = "XYZ Insurance", MinAmount = 50.00, MaxAmount = 75.00}
-Payment = {Payee = "Credit Card Payment"}
+Payment = {Payee = "Credit Card Payment", MinDateInMonth = 15}
 ```
 
 ### The `[memos]` section

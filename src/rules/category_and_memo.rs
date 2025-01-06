@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer};
 
+use crate::rules::date_filter::{date_is_outside_range, validate_date_filters};
 use crate::rules::eqregex::{deserialize_option_regex, EqRegex};
 use crate::NormalizedBankData;
 
@@ -31,6 +32,14 @@ pub struct CategoryAndMemoRules {
     /// The payee as originally given in the raw data.
     #[serde(default, deserialize_with = "deserialize_option_regex")]
     orig_payee: Option<EqRegex>,
+    /// The lowest date in the month that a transaction can have to identify as this payee.
+    min_date_in_month: Option<u32>,
+    /// The highest date in the month that a transaction can have to identify as this payee.
+    max_date_in_month: Option<u32>,
+    /// The lowest date in the year that a transaction can have to identify as this payee.
+    min_date_in_year: Option<(u32, u32)>,
+    /// The highest date in the year that a transaction can have to identify as this payee.
+    max_date_in_year: Option<(u32, u32)>,
 }
 
 /// The TRUTH!
@@ -59,6 +68,8 @@ impl CategoryAndMemoRules {
         let orig_payee = mapping
             .get("orig_payee")
             .and_then(|x| Some(EqRegex(Regex::new(x).unwrap())));
+        let (min_date_in_month, max_date_in_month, min_date_in_year, max_date_in_year) =
+            crate::rules::date_filter::process_date_filter_mapping(mapping);
         CategoryAndMemoRules {
             payee,
             category,
@@ -67,6 +78,10 @@ impl CategoryAndMemoRules {
             max_amount,
             income_ok,
             orig_payee,
+            min_date_in_month,
+            max_date_in_month,
+            min_date_in_year,
+            max_date_in_year,
         }
     }
 
@@ -78,6 +93,10 @@ impl CategoryAndMemoRules {
             || self.max_amount.is_some()
             || self.amount.is_some()
             || self.orig_payee.is_some()
+            || self.min_date_in_month.is_some()
+            || self.max_date_in_month.is_some()
+            || self.min_date_in_year.is_some()
+            || self.max_date_in_year.is_some()
     }
 
     /// Determine if the given transaction matches this set of rules.
@@ -130,6 +149,15 @@ impl CategoryAndMemoRules {
             return false;
         }
 
+        // Ensure the dates are within the required ranges.
+        if date_is_outside_range(
+            &transaction.date,
+            (self.min_date_in_month, self.max_date_in_month),
+            (self.min_date_in_year, self.max_date_in_year),
+        ) {
+            return false;
+        }
+
         true
     }
 
@@ -140,7 +168,12 @@ impl CategoryAndMemoRules {
                 "The {obj_type} {name:#?} must implement a rule."
             )));
         }
-        Ok(())
+        validate_date_filters(
+            obj_type,
+            name,
+            (self.min_date_in_month, self.max_date_in_month),
+            (self.min_date_in_year, self.max_date_in_year),
+        )
     }
 }
 
@@ -210,6 +243,19 @@ mod test {
                 .unwrap()
                 .to_string(),
             "The category \"Dining\" must implement a rule."
+        );
+    }
+
+    #[test]
+    fn test_date_filter_must_be_valid() {
+        let given = vec![("max_date_in_year", "3/40")];
+        let result = CategoryAndMemoRules::new(as_hashmap(given)).validate("category", "test");
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .to_string(),
+            "The category \"test\" specifies a MaxDateInYear where the month is not in [1, 12] or the day is not in [1, 31]."
         );
     }
 
@@ -292,6 +338,106 @@ mod test {
     #[case(
         vec![("amount", "15.00")],
         vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_month", "2")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("max_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("max_date_in_month", "2")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_month", "2"), ("max_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_month", "6"), ("max_date_in_month", "10")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_month", "25"), ("max_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_month", "25"), ("max_date_in_month", "2")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_month", "25"), ("max_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-29"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_month", "25"), ("max_date_in_month", "6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-24"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_year", "5/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_year", "3/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("max_date_in_year", "5/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("max_date_in_year", "3/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_year", "3/6"), ("max_date_in_year", "5/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_year", "5/6"), ("max_date_in_year", "8/10")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_year", "12/3"), ("max_date_in_year", "5/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_year", "12/3"), ("max_date_in_year", "3/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-04-03"), ("Amount", "-15.43")],
+        false,
+    )]
+    #[case(
+        vec![("min_date_in_year", "12/3"), ("max_date_in_year", "3/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-12-29"), ("Amount", "-15.43")],
+        true,
+    )]
+    #[case(
+        vec![("min_date_in_year", "12/3"), ("max_date_in_year", "3/6")],
+        vec![("Payee", "ACE"), ("Date", "2024-11-24"), ("Amount", "-15.43")],
         false,
     )]
     fn test_transaction_matches(
