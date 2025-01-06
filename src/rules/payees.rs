@@ -197,7 +197,7 @@ where
     // Deserializer in either sequence or a scalar.
     #[derive(Deserialize)]
     #[serde(untagged)]
-    enum Wrapper {
+    enum PayeeValue {
         #[serde(deserialize_with = "vec_payee_rules")]
         VecForm(Vec<PayeeRules>),
         #[serde(deserialize_with = "string_or_struct")]
@@ -205,11 +205,12 @@ where
     }
 
     // Choose the correct deserializer based on the data format.
-    let v = HashMap::<String, Wrapper>::deserialize(deserializer)?;
+    let v =
+        HashMap::<String, PayeeValue>::deserialize(deserializer)?;
     Ok(v.into_iter()
         .map(|(k, v)| match v {
-            Wrapper::VecForm(seq) => (k, seq),
-            Wrapper::ScalarForm(scalar) => (k, vec![scalar]),
+            PayeeValue::VecForm(seq) => (k, seq),
+            PayeeValue::ScalarForm(scalar) => (k, vec![scalar]),
         })
         .collect())
 }
