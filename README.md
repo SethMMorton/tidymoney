@@ -52,10 +52,29 @@ There are four fields you can use to match a transaction:
 - `MinAmount` - An upper range for the dollar amount of the transaction.
 - `MaxAmount` - A lower range for the dollar amount of the transaction.
 - `Amount` - A specific dollar amount of the transaction.
+- `MinDateInMonth` - A lower-bound date within the month for the transaction.
+                     Useful to identify monthly transactions with generic names.
+                     A single number from 1-31 (inclusive) is provided, and the
+                     number will be clipped against the number of days in the
+                     month.
+- `MaxDateInMonth` - An upper-bound date within the month for the transaction.
+                     See `MinDateInMonth` for use and allowed values.
+- `MinDateInYear` - A lower-bound date within the year for the transaction.
+                    Useful to identify yearly transactions with generic names.
+                    A two-element list is provided where the first number is the
+                    month number (1-12, inclusive) and the second number is the
+                    day number (1-number of days in the month, inclusive).
+- `MaxDateInYear` - An upper-bound date within the year for the transaction.
+                    See `MinDateInYear` for use and allowed values.
 
 All of the dollar amount fields (`MinAmount`, `MaxAmount`, and `Amount`)
 should be given as positive numbers whether or not the transaction is
 a debit or credit.
+
+The pairs `MinDateInMonth`/`MaxDateInMonth` and `MinDateInYear`/`MaxDateInYear`
+both support "wraparound" dates. If the "min" date is later than the "max"
+date, then it assumes the range goes from the end of one month/year to the
+beginning of the next.
 
 If you only want to specify `Payee`, then a single string can be given
 instead of a mapping.

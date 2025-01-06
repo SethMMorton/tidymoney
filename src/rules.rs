@@ -1,4 +1,5 @@
 mod category_and_memo;
+mod date_filter;
 mod eqregex;
 mod mapping;
 mod paths;
@@ -132,6 +133,13 @@ impl RuleFileData {
             }
         }
 
+        // Verify the contents of the payee rules are correct.
+        for (name, payees) in &self.payees {
+            for payee in payees {
+                payee.validate(name)?;
+            }
+        }
+
         // Verify that categories and memos have at least one check implemented.
         if let Some(c) = &self.categories {
             for (cat_name, categories) in c {
@@ -208,10 +216,10 @@ mod test {
         let given = indoc! { r#"
         [payees]
         Apple = "APPLE"
-        Hulu = {Pattern = "PAYPAL INST TXFR", Amount = 24.00}
+        Hulu = {Pattern = "PAYPAL INST TXFR", Amount = 24.00, MinDateInYear = [3, 6], MaxDateInYear = [5, 7]}
         Ace = [
             "ACE HARDWARE",
-            {Pattern = "HARDWARE", MaxAmount = 20.00},
+            {Pattern = "HARDWARE", MaxAmount = 20.00, MinDateInMonth = 4, MaxDateInMonth = 7},
         ]
 
         [categories]
@@ -253,6 +261,8 @@ mod test {
                     vec![PayeeRules::new(as_hashmap(vec![
                         ("pattern", "PAYPAL INST TXFR"),
                         ("amount", "24.00"),
+                        ("min_date_in_year", "3/6"),
+                        ("max_date_in_year", "5/7"),
                     ]))],
                 ),
                 (
@@ -262,6 +272,8 @@ mod test {
                         PayeeRules::new(as_hashmap(vec![
                             ("pattern", "HARDWARE"),
                             ("max_amount", "20.00"),
+                            ("min_date_in_month", "4"),
+                            ("max_date_in_month", "7"),
                         ])),
                     ],
                 ),
@@ -296,7 +308,10 @@ mod test {
                 (
                     "Parking".to_string(),
                     vec![
-                        CategoryAndMemoRules::new(as_hashmap(vec![("orig_payee", "PARKING"), ("income_ok", "false")])),
+                        CategoryAndMemoRules::new(as_hashmap(vec![
+                            ("orig_payee", "PARKING"),
+                            ("income_ok", "false"),
+                        ])),
                         CategoryAndMemoRules::new(as_hashmap(vec![("payee", "Johnson Garage")])),
                     ],
                 ),

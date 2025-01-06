@@ -118,7 +118,7 @@ fn sample_rule_file(tempdir: impl AsRef<Path>) -> String {
     ]
     Transfer = "Surprise Savings Booster Transfer to Savings Account"
     Visible = {Pattern = "PAYPAL INST XFER", Amount = 35.00}
-    "XYZ Insurance" = {Pattern = "PAYPAL INST XFER", MinAmount = 65.00, MaxAmount = 75.00}
+    "XYZ Insurance" = {Pattern = "PAYPAL INST XFER", MinAmount = 65.00, MaxAmount = 75.00, MinDateInMonth = 15}
 
     [categories]
     Dining = [
@@ -204,6 +204,7 @@ fn sample_csv_files() -> Vec<String> {
             2024-10-21,01:13:22,-15.99,Withdrawal,PAYPAL INST XFER
             2024-10-18,01:04:46,-69.75,Withdrawal,PAYPAL INST XFER
             2024-10-11,16:14:48,550.00,Deposit,ABC INC DIRDEP
+            2024-10-03,01:04:46,-69.75,Withdrawal,PAYPAL INST XFER
             2024-09-28,13:52:23,0.00,Deposit,Ping
             2024-09-23,23:43:32,0.12,Deposit,Interest Paid
         "# },
@@ -238,6 +239,7 @@ fn expected_results() -> HashMap<String, String> {
                 2024-10-21,PAYPAL INST XFER,,,-15.99,
                 2024-10-18,XYZ Insurance,Insurance,,-69.75,
                 2024-10-11,Salary,Net Income,,550.00,
+                2024-10-03,PAYPAL INST XFER,,,-69.75,
                 2024-09-23,Interest Paid,,,0.12,
                 "#
             },
